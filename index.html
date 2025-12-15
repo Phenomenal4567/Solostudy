@@ -104,7 +104,7 @@
             const peerRef = useRef(null);
             const connectionTimeoutRef = useRef(null);
 
-            // CHANGED: Default courses list is now empty
+            // Default courses list is empty
             const defaultCourses = [];
 
             // --- INITIALIZATION ---
@@ -256,12 +256,10 @@
                     });
                 };
 
-                // If peer is already open (unlikely if just created, but safe to check)
                 if (joinerPeer.open) {
                     attemptConnection();
                 } else {
                     joinerPeer.on('open', attemptConnection);
-                    // Also catch errors during initialization
                     joinerPeer.on('error', (err) => {
                          console.error("Joiner Peer Init Error", err);
                          alert("Could not initialize connection.");
@@ -335,6 +333,8 @@
 
             const playAlarm = () => {
                 if (!soundEnabled) return;
+                
+                // 1. Play Custom Audio if uploaded
                 if (customAudioUrl) {
                     if (activeAudioRef.current) {
                         activeAudioRef.current.pause();
@@ -345,20 +345,32 @@
                     audio.play().catch(e => console.error("Audio play failed", e));
                     return; 
                 }
+
+                // 2. Play Default "Midnight Comfort" Chime
                 if (!audioContextRef.current) return;
                 try {
                     const ctx = audioContextRef.current;
                     const osc = ctx.createOscillator();
                     const gain = ctx.createGain();
+                    
                     osc.connect(gain);
                     gain.connect(ctx.destination);
+                    
                     const now = ctx.currentTime;
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(880, now); 
-                    gain.gain.setValueAtTime(0.3, now);
-                    gain.gain.linearRampToValueAtTime(0, now + 0.8);
+                    
+                    // Use a Sine wave for a pure, soft tone
+                    osc.type = 'sine'; 
+                    // 440Hz is A4 (standard pitch), much lower/softer than the previous 880Hz
+                    osc.frequency.setValueAtTime(440, now); 
+                    
+                    // Gentle Envelope (Fade in and Fade out)
+                    gain.gain.setValueAtTime(0, now); // Start silent
+                    gain.gain.linearRampToValueAtTime(0.15, now + 0.5); // Fade in to gentle volume over 0.5s
+                    gain.gain.linearRampToValueAtTime(0, now + 4.0); // Slow fade out to silence over 4s
+                    
                     osc.start(now);
-                    osc.stop(now + 1.0);
+                    osc.stop(now + 4.0); // Stop exactly at 4 seconds
+                    
                 } catch (e) { console.error("Audio failed", e); }
             };
 
@@ -625,7 +637,7 @@
                                         className={`flex-1 rounded-xl px-4 py-3 outline-none border text-center font-bold tracking-widest uppercase ${theme.input}`} 
                                     />
                                     {remotePeerId.length === 4 && (
-                                        <button onClick={connectToPeer} className={`px-6 rounded-xl font-bold transition-all animate-slide-up ${isDarkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}>
+                                        <button onClick={connectToPeer} className={`px-6 rounded-xl font-bold transition-all animate-slide-up text-white shadow-lg shadow-emerald-500/30 bg-emerald-500 hover:bg-emerald-600`}>
                                             Join
                                         </button>
                                     )}
